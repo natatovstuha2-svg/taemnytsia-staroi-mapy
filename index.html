@@ -1,176 +1,384 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Таємниця старої мапи</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Таємниця старої мапи</title>
 
-  <style>
-    * { box-sizing: border-box; }
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: #fff; }
 
-    html, body {
-      margin: 0;
-      min-height: 100%;
-      background: #fff;
-      font-family: Arial, sans-serif;
-    }
+  body {
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
 
-    body {
-      min-height: 100svh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+  .viewer {
+    width: 100%;
+    min-height: 100svh;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    place-items: center;
+    gap: 10px;
+    padding: 22px 14px 14px;
+  }
 
-    .book-area {
-      width: min(94vw, 860px);
-      height: min(80svh, 650px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-    }
+  .stage {
+    width: 100%;
+    height: calc(100svh - 88px);
+    min-height: 420px;
+    display: grid;
+    place-items: center;
+    perspective: 1800px;
+  }
 
-    #book {
-      margin: auto;
-      filter: drop-shadow(0 16px 18px rgba(0,0,0,.18));
-    }
+  #scaleBox {
+    position: relative;
+    transform-origin: center center;
+  }
 
-    .controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      margin-top: 6px;
-      min-height: 48px;
-    }
+  #physicalBook {
+    position: relative;
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 18px 22px rgba(0,0,0,.18));
+  }
 
-    button {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      border: 1px solid #d9d9d9;
-      background: #fff;
-      font-size: 27px;
-      line-height: 1;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,.08);
-    }
+  /* Тонка "обкладинка" під усім книжковим блоком. */
+  #physicalBook::before {
+    content: "";
+    position: absolute;
+    z-index: -3;
+    left: 5px;
+    right: -9px;
+    top: 5px;
+    bottom: -9px;
+    border-radius: 4px 7px 8px 5px;
+    background: #174f7c;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,.16),
+      8px 10px 20px rgba(0,0,0,.12);
+  }
 
-    button:disabled {
-      opacity: .25;
-      cursor: default;
-    }
+  /* Дуже тонкий паперовий блок, без товстих "смуг". */
+  #physicalBook::after {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    left: 3px;
+    right: -5px;
+    top: 3px;
+    bottom: -5px;
+    border-radius: 3px 5px 6px 4px;
+    background: #f6f6f2;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+  }
 
-    #counter {
-      min-width: 60px;
-      text-align: center;
-      font-size: 13px;
-      color: #777;
-    }
+  #bookCrop {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    overflow: hidden;
+    background: transparent;
+    transition: width .22s ease;
+  }
 
-    @media (max-width: 700px) {
-      body {
-        overflow: auto;
-      }
+  #bookHost {
+    width: 800px;
+    height: 600px;
+    transform: translateX(0);
+    transition: transform .22s ease;
+  }
 
-      .book-area {
-        width: 98vw;
-        height: 78svh;
-        padding: 8px;
-      }
-    }
-  </style>
+  /* Закрита обкладинка: показуємо тільки праву половину,
+     без величезнього порожнього аркуша ліворуч. */
+  #physicalBook.cover #bookCrop { width: 400px; }
+  #physicalBook.cover #bookHost { transform: translateX(-400px); }
+
+  /* Фінал: показуємо тільки останню ліву сторінку. */
+  #physicalBook.final #bookCrop { width: 400px; }
+  #physicalBook.final #bookHost { transform: translateX(0); }
+
+  /* Відкритий розворот: легкий центральний згин. */
+  #physicalBook.open #bookCrop::after {
+    content: "";
+    position: absolute;
+    z-index: 40;
+    pointer-events: none;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 16px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      90deg,
+      rgba(0,0,0,.08),
+      rgba(255,255,255,.10) 45%,
+      rgba(0,0,0,.06)
+    );
+    opacity: .55;
+  }
+
+  .page {
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .page img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #fff;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 46px;
+  }
+
+  .nav {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,.12);
+    background: #fff;
+    color: #333;
+    font-size: 27px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 5px 14px rgba(0,0,0,.08);
+  }
+
+  .nav:disabled {
+    opacity: .24;
+    cursor: default;
+  }
+
+  #counter {
+    min-width: 70px;
+    text-align: center;
+    color: #777;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #loading {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: #777;
+    font-size: 14px;
+  }
+
+  #loading.hidden { display: none; }
+
+  @media (max-width: 700px) {
+    .viewer { padding: 10px 6px 8px; }
+    .stage { height: calc(100svh - 72px); min-height: 360px; }
+  }
+</style>
 </head>
 
 <body>
+<main class="viewer">
+  <section class="stage" aria-label="Інтерактивна книга">
+    <div id="loading">Завантаження книги…</div>
 
-  <div class="book-area">
-    <div id="book"></div>
-  </div>
+    <div id="scaleBox">
+      <div id="physicalBook" class="cover">
+        <div id="bookCrop">
+          <div id="bookHost"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div class="controls">
-    <button id="prev" type="button" aria-label="Попередня сторінка">‹</button>
+  <nav class="controls" aria-label="Навігація">
+    <button id="prev" class="nav" type="button" aria-label="Назад">‹</button>
     <span id="counter">1 / 14</span>
-    <button id="next" type="button" aria-label="Наступна сторінка">›</button>
-  </div>
+    <button id="next" class="nav" type="button" aria-label="Далі">›</button>
+  </nav>
+</main>
 
-  <!-- Справжня бібліотека м'якого перегортання сторінок -->
-  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script>
+(() => {
+  "use strict";
 
-  <script>
-    const pages = [
-      './00-cover.webp',
-      './01-text.png',
-      './02-illustration.webp',
-      './03-text.png',
-      './04-illustration.webp',
-      './05-illustration.webp',
-      './06-text.png',
-      './07-illustration.webp',
-      './08-illustration.webp',
-      './09-text.png',
-      './10-illustration.webp',
-      './11-text.png',
-      './12-illustration.webp',
-      './13-finale.webp'
-    ];
+  /* ТОЧНИЙ порядок ваших 14 готових файлів — без перестановок. */
+  const PAGES = [
+    "./00-cover.webp",
+    "./01-text.png",
+    "./02-illustration.webp",
+    "./03-text.png",
+    "./04-illustration.webp",
+    "./05-illustration.webp",
+    "./06-text.png",
+    "./07-illustration.webp",
+    "./08-illustration.webp",
+    "./09-text.png",
+    "./10-illustration.webp",
+    "./11-text.png",
+    "./12-illustration.webp",
+    "./13-finale.webp"
+  ];
 
-    const bookElement = document.getElementById('book');
-    const prevButton = document.getElementById('prev');
-    const nextButton = document.getElementById('next');
-    const counter = document.getElementById('counter');
+  const host = document.getElementById("bookHost");
+  const physical = document.getElementById("physicalBook");
+  const scaleBox = document.getElementById("scaleBox");
+  const loading = document.getElementById("loading");
+  const prev = document.getElementById("prev");
+  const next = document.getElementById("next");
+  const counter = document.getElementById("counter");
 
-    const pageFlip = new St.PageFlip(bookElement, {
-      width: 400,
-      height: 600,
+  let flip = null;
+  let currentIndex = 0;
 
-      size: 'stretch',
-      minWidth: 260,
-      maxWidth: 400,
-      minHeight: 390,
-      maxHeight: 600,
-
-      showCover: true,
-      usePortrait: true,
-      autoSize: true,
-
-      drawShadow: true,
-      maxShadowOpacity: 0.35,
-      flippingTime: 1100,
-
-      startPage: 0,
-      mobileScrollSupport: false,
-      swipeDistance: 20,
-      clickEventForward: true,
-      disableFlipByClick: false
+  function preload(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = () => reject(new Error("Не знайдено файл: " + src));
+      img.src = src;
     });
+  }
 
-    pageFlip.loadFromImages(pages);
+  function buildPages() {
+    PAGES.forEach((src, i) => {
+      const page = document.createElement("div");
+      page.className = "page";
+      page.dataset.density =
+        (i === 0 || i === PAGES.length - 1) ? "hard" : "soft";
 
-    function updateControls() {
-      const index = pageFlip.getCurrentPageIndex();
-      counter.textContent = `${index + 1} / ${pages.length}`;
-      prevButton.disabled = index <= 0;
-      nextButton.disabled = index >= pages.length - 1;
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = i === 0 ? "Обкладинка" : "Сторінка " + (i + 1);
+      img.draggable = false;
+
+      page.appendChild(img);
+      host.appendChild(page);
+    });
+  }
+
+  function setBookState(index) {
+    currentIndex = index;
+
+    physical.classList.remove("cover", "open", "final");
+
+    if (index === 0) {
+      physical.classList.add("cover");
+    } else if (index >= PAGES.length - 1) {
+      physical.classList.add("final");
+    } else {
+      physical.classList.add("open");
     }
 
-    pageFlip.on('init', updateControls);
-    pageFlip.on('flip', updateControls);
-    pageFlip.on('changeOrientation', updateControls);
+    counter.textContent = `${index + 1} / ${PAGES.length}`;
+    prev.disabled = index <= 0;
+    next.disabled = index >= PAGES.length - 1;
 
-    prevButton.addEventListener('click', () => pageFlip.flipPrev('bottom'));
-    nextButton.addEventListener('click', () => pageFlip.flipNext('bottom'));
+    requestAnimationFrame(fitBook);
+  }
 
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowRight') pageFlip.flipNext('bottom');
-      if (event.key === 'ArrowLeft') pageFlip.flipPrev('bottom');
-    });
+  function fitBook() {
+    const stage = document.querySelector(".stage");
+    const rect = stage.getBoundingClientRect();
 
-    updateControls();
-  </script>
+    const logicalWidth =
+      physical.classList.contains("open") ? 800 : 400;
+    const logicalHeight = 600;
 
+    const availableWidth = Math.max(280, rect.width - 44);
+    const availableHeight = Math.max(320, rect.height - 34);
+
+    const scale = Math.min(
+      1,
+      availableWidth / logicalWidth,
+      availableHeight / logicalHeight
+    );
+
+    scaleBox.style.width = logicalWidth + "px";
+    scaleBox.style.height = logicalHeight + "px";
+    scaleBox.style.transform = `scale(${scale})`;
+  }
+
+  async function init() {
+    try {
+      if (!window.St || !window.St.PageFlip) {
+        throw new Error("Не завантажилась механіка перегортання.");
+      }
+
+      await Promise.all(PAGES.map(preload));
+      buildPages();
+
+      flip = new St.PageFlip(host, {
+        width: 400,
+        height: 600,
+        size: "fixed",
+        drawShadow: true,
+        flippingTime: 1150,
+        usePortrait: false,
+        startPage: 0,
+        autoSize: false,
+        maxShadowOpacity: 0.34,
+        showCover: true,
+        mobileScrollSupport: false,
+        swipeDistance: 24,
+        clickEventForward: true,
+        useMouseEvents: true,
+        disableFlipByClick: false
+      });
+
+      flip.on("init", e => setBookState(Number(e.data.page) || 0));
+      flip.on("flip", e => setBookState(Number(e.data) || 0));
+
+      flip.loadFromHTML(document.querySelectorAll(".page"));
+
+      prev.addEventListener("click", () => {
+        if (currentIndex > 0) flip.flipPrev("bottom");
+      });
+
+      next.addEventListener("click", () => {
+        if (currentIndex < PAGES.length - 1) flip.flipNext("bottom");
+      });
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "ArrowRight" && currentIndex < PAGES.length - 1) {
+          flip.flipNext("bottom");
+        }
+        if (e.key === "ArrowLeft" && currentIndex > 0) {
+          flip.flipPrev("bottom");
+        }
+      });
+
+      window.addEventListener("resize", fitBook);
+
+      loading.classList.add("hidden");
+      setBookState(0);
+
+    } catch (err) {
+      console.error(err);
+      loading.textContent = err.message || "Не вдалося відкрити книгу.";
+    }
+  }
+
+  init();
+})();
+</script>
 </body>
 </html>
