@@ -1,0 +1,103 @@
+:root {
+  color-scheme: light;
+  --safe-x: clamp(18px, 5vw, 96px);
+  --safe-y: clamp(18px, 4vh, 64px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #161616;
+}
+
+.stage {
+  width: 100vw;
+  height: 100dvh;
+  padding: var(--safe-y) var(--safe-x);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  place-items: center;
+  gap: 12px;
+}
+
+.book-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  perspective: 2200px;
+}
+
+.book {
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, .18));
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+/* The library paints each page on canvas; keep its surfaces clean. */
+.stf__parent,
+.stf__wrapper,
+.stf__block,
+.stf__item {
+  background: transparent !important;
+}
+
+.controls {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: .82;
+}
+
+.nav-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0 0 3px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 5px 16px rgba(0,0,0,.08);
+  color: #222;
+  font: 300 30px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.nav-btn:hover { background: #fff; }
+.nav-btn:disabled { opacity: .28; cursor: default; }
+
+.counter {
+  min-width: 70px;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: .02em;
+  color: rgba(0,0,0,.58);
+}
+
+@media (max-width: 720px) {
+  :root {
+    --safe-x: 12px;
+    --safe-y: 12px;
+  }
+
+  .stage { gap: 8px; }
+  .controls { height: 34px; }
+  .nav-btn { width: 34px; height: 34px; font-size: 27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book { filter: drop-shadow(0 12px 20px rgba(0,0,0,.14)); }
+}
